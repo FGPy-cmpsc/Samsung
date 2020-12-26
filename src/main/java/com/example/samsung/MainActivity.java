@@ -7,6 +7,9 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import com.google.gson.Gson;
 
+
+import android.os.Handler;
+import android.os.Message;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -31,21 +34,33 @@ import java.util.Arrays;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "myLogs";
     Button bStart, btJustDoIt;
+    ParseGson p;
     ProgressBar progressBar;
     TextView text;
-
+    Handler handler;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        handler = new Handler() {   // создание хэндлера
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                text.setText(p.toString());
+                text.invalidate();
+            }
+        };
+
         bStart = (Button) findViewById(R.id.btStart);
         btJustDoIt = (Button) findViewById(R.id.btJustDoIt);
         text = (TextView) findViewById(R.id.text);
         bStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(MainActivity.this, "Делаем операцию в потоке (10с)", Toast.LENGTH_SHORT).show();
-                new GsonText().execute();
+
+                AnotherThread anotherThread=new AnotherThread();
+                anotherThread.start();
+
             }
         });
         btJustDoIt.setOnClickListener(new View.OnClickListener() {
@@ -74,37 +89,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    private class AnotherThread extends Thread {
 
-    private class GsonText extends AsyncTask<Void, Void, Void> {
-        private String s;
-        private ParseGson p;
-        private class ParseGson{
-            private int userId;
-            private int id;
-            private String title;
-            private String body;
-
-            @Override
-            public String toString() {
-                return "ParseGson{" +
-                        "userId=" + userId +
-                        ", id=" + id +
-                        ", title='" + title + '\'' +
-                        ", body='" + body + '\'' +
-                        '}';
-            }
-        }
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        protected Void doInBackground(Void... args) {
-            Text();
-            return null;
-        }
-
-        protected Void Text() {
+        public void run() {
             StringBuilder response = new StringBuilder();
             URL url;
             try {
@@ -114,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
                 InputStream is = http.getInputStream();
                 BufferedReader br = new BufferedReader(new InputStreamReader(is));
                 String line;
-                while ((line = br.readLine())!=null){
+                while ((line = br.readLine()) != null) {
                     response.append(line);
                     response.append("\n");
                 }
@@ -122,14 +109,25 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            s=response.toString();
+            String s = response.toString();
             Gson g = new Gson();
             p = g.fromJson(s, ParseGson.class);
-            return null;
+            handler.sendEmptyMessage(1);
         }
-
-        protected void onPostExecute(Void f) {
-            text.setText("Выполнено 100/100\n"+p);
+    }
+    public class ParseGson{
+        private int userId;
+        private int id;
+        private String title;
+        private String body;
+        @Override
+        public String toString() {
+            return "ParseGson{" +
+                    "userId=" + userId +
+                    ", id=" + id +
+                    ", title='" + title + '\'' +
+                    ", body='" + body + '\'' +
+                    '}';
         }
 
     }
